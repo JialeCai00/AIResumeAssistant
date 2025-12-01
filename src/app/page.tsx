@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +11,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export default function ResumeCoach() {
   // 新版 API：需要手动管理 input 状态
   const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+    }),
     experimental_throttle: 100,
   });
 
