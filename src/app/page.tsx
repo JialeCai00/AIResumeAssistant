@@ -1,65 +1,108 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useChat } from "@ai-sdk/react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+export default function ResumeCoach() {
+  // 新版 API：需要手动管理 input 状态
+  const { messages, sendMessage, status } = useChat({
+    experimental_throttle: 100,
+  });
+
+  // 手动管理输入状态
+  const [input, setInput] = useState("");
+
+  // 手动处理提交
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    await sendMessage({ text: input });
+    setInput(""); // 清空输入
+  };
+
+  // 修复：正确的 loading 状态判断
+  const isLoading = status === "submitted" || status === "streaming";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col items-center bg-gray-50 p-4 md:p-10">
+      <div className="w-full max-w-4xl space-y-8">
+        {/* 标题区 */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+            AI 简历优化助手 🚀
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-500">
+            粘贴你的简历内容，获取大厂面试官视角的专业建议
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* 核心交互区：左边输入，右边输出 */}
+        <div className="grid gap-6 md:grid-cols-2 h-[600px]">
+          {/* 左侧：输入区 */}
+          <Card className="flex flex-col h-full">
+            <CardHeader>
+              <CardTitle>你的简历</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col gap-4">
+              <form
+                onSubmit={handleSubmit}
+                className="flex-1 flex flex-col gap-4"
+              >
+                <Textarea
+                  className="flex-1 resize-none p-4 text-base"
+                  placeholder="在此处粘贴你的简历文本..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                />
+                <Button type="submit" disabled={isLoading} className="w-full">
+                  {isLoading ? "正在分析..." : "开始分析"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* 右侧：AI 建议区 */}
+          <Card className="flex flex-col h-full bg-white">
+            <CardHeader>
+              <CardTitle>优化建议</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 p-0">
+              <ScrollArea className="h-[500px] w-full p-4">
+                {messages.length > 0 ? (
+                  messages.map(
+                    (m) =>
+                      // 只显示 AI 的回复
+                      m.role === "assistant" && (
+                        <div
+                          key={m.id}
+                          className="prose prose-sm dark:prose-invert max-w-none"
+                        >
+                          <div className="whitespace-pre-wrap">
+                            {/* 修复：正确访问 parts 数组中的 text */}
+                            {m.parts.map((part, i) =>
+                              part.type === "text" ? (
+                                <span key={i}>{part.text}</span>
+                              ) : null
+                            )}
+                          </div>
+                        </div>
+                      )
+                  )
+                ) : (
+                  <div className="flex h-full items-center justify-center text-gray-400 text-sm">
+                    AI 的建议将显示在这里...
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
